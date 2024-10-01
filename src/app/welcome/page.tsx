@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { User, FileText } from "lucide-react";
 import { redirect } from "next/navigation";
+import { saveWelcomeDetails } from "@/actions/saveWelcomeDetails";
 
 async function WelcomeScreen() {
   const session = await auth();
@@ -13,8 +14,6 @@ async function WelcomeScreen() {
   if (!session?.user) {
     redirect("/");
   }
-
-  const handleSubmit = async () => {};
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-orange-50 to-white">
@@ -25,7 +24,7 @@ async function WelcomeScreen() {
               <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to BuyMeABiriyani!</h1>
               <p className="text-gray-600">Let's set up your profile to get started.</p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form action={saveWelcomeDetails} className="space-y-6">
               <div className="space-y-2">
                 <label htmlFor="username" className="text-sm font-medium text-gray-700 flex items-center">
                   <User className="w-5 h-5 mr-2 text-orange-500" />
@@ -33,6 +32,7 @@ async function WelcomeScreen() {
                 </label>
                 <Input
                   id="username"
+                  name="username"
                   type="text"
                   placeholder="spicychef123"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -46,6 +46,7 @@ async function WelcomeScreen() {
                 </label>
                 <Textarea
                   id="bio"
+                  name="bio"
                   placeholder="I'm a food enthusiast sharing my culinary adventures..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                   rows={4}

@@ -7,20 +7,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Camera,
-  Edit2,
-  Heart,
   DollarSign,
   Users,
   TrendingUp,
   LogOut,
   ExternalLink,
+  Heart,
 } from "lucide-react";
 import Image from "next/image";
 import { handleSignOut } from "@/actions/logoutAction";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Creator } from "@/types/dashboard"; // Import the Creator type
 
 function CreatorDashboard({ params }: { params: { username: string } }) {
   const [selectedAmount, setSelectedAmount] = useState(10);
+  const [creatorData, setCreatorData] = useState<Creator | null>(null);
+  console.log(creatorData);
+
+  useEffect(() => {
+    const fetchCreatorData = async () => {
+      try {
+        const response = await fetch(`/api/creator/1`);
+        const data = await response.json();
+        setCreatorData(data);
+      } catch (error) {
+        console.error("Error fetching creator data:", error);
+      }
+    };
+
+    fetchCreatorData();
+  }, []);
+
+  if (!creatorData) {
+    return <div>Loading...</div>;
+  }
+
+  const totalDonations = creatorData.donations.reduce(
+    (sum, donation) => sum + donation.amount,
+    0
+  );
+  const supporterCount = creatorData.supporters.length;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -31,7 +57,7 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
           </Link>
           <div className="flex items-center space-x-4">
             <Link
-              href={`/${params.username}`}
+              href={`/${creatorData.username}`}
               className="text-gray-600 hover:text-orange-500 flex items-center"
             >
               <ExternalLink className="h-5 w-5 mr-1" />
@@ -53,13 +79,12 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
       {/* Cover Photo */}
       <div className="relative h-64 md:h-80 lg:h-96">
         <Image
-          src=""
-          // src="https://fastly.picsum.photos/id/112/4200/2800.jpg?hmac=8Qhr0ehkFOnlKO__aKhLMQTu2qzcAten9LHpBO6uk-k"
+          src="https://fastly.picsum.photos/id/112/4200/2800.jpg?hmac=8Qhr0ehkFOnlKO__aKhLMQTu2qzcAten9LHpBO6uk-k"
           alt="Cover Photo"
           fill
           placeholder="blur"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-          objectFit="cover"
+          // objectFit="cover"
           priority
         />
         <label
@@ -71,7 +96,6 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
             id="cover-photo-input"
             type="file"
             accept="image/*"
-            // onChange={handleCoverPhotoChange}
             className="hidden"
           />
         </label>
@@ -82,9 +106,12 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
         <div className="flex flex-col items-center -mt-20">
           <div className="relative">
             <Avatar className="w-40 h-40 border-4 border-white shadow-lg">
-              <AvatarImage src="" alt={params.username} />
+              <AvatarImage
+                src="https://avatar.iran.liara.run/public"
+                alt={creatorData.username}
+              />
               <AvatarFallback>
-                {params.username[0].toUpperCase()}
+                {creatorData.username[0].toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <label
@@ -105,24 +132,27 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
           <div className="text-center mt-3 space-y-2">
             <div className="flex items-center justify-center">
               <h1 className="text-2xl font-bold text-gray-900">
-                {params.username}
+                {creatorData.username}
               </h1>
             </div>
 
             <div className="max-w-2xl mx-auto">
               <p className="text-gray-600">
-                A passionate creator serving up delicious content! 🍛
+                {creatorData.bio ||
+                  "A passionate creator serving up delicious content! 🍛"}
               </p>
             </div>
 
             <div className="flex justify-center space-x-8 text-gray-600 mt-2">
               <div className="flex items-center space-x-1">
                 <Users className="h-4 w-4" />
-                <span className="text-sm">1.2K supporters</span>
+                <span className="text-sm">{supporterCount} supporters</span>
               </div>
               <div className="flex items-center space-x-1">
                 <DollarSign className="h-4 w-4" />
-                <span className="text-sm">₹15,000 received</span>
+                <span className="text-sm">
+                  ₹{totalDonations.toFixed(2)} received
+                </span>
               </div>
               <div className="flex items-center space-x-1">
                 <TrendingUp className="h-4 w-4" />
@@ -139,7 +169,7 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
           <CardContent className="p-6">
             <h2 className="text-2xl font-bold mb-4">Buy Me A Biriyani</h2>
             <p className="text-gray-600 mb-6">
-              Support {params.username} with a delicious virtual biriyani!
+              Support {creatorData.username} with a delicious virtual biriyani!
             </p>
             <div className="grid grid-cols-3 gap-4 mb-6">
               {[5, 10, 15].map((amount) => (
@@ -196,52 +226,48 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
           </CardContent>
         </Card>
 
-        {/* <Card>
+        <Card>
           <CardContent className="p-6">
             <h2 className="text-2xl font-bold mb-4">Recent Supporters</h2>
             <div className="space-y-4">
-              {[
-                {
-                  amount: 15,
-                  emoji: "😍",
-                },
-                {
-                  amount: 10,
-                  emoji: "😊",
-                },
-                {
-                  amount: 20,
-                  emoji: "🤩",
-                },
-              ].map((supporter, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-4 p-4 bg-white rounded-lg shadow transition-all duration-300 hover:shadow-md"
-                >
-                  <Avatar>
-                    <AvatarFallback className="bg-orange-100 text-orange-600">
-                      {supporter.emoji}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-gray-800">
-                        {supporter.name}
-                      </h3>
-                      <p className="text-sm font-medium text-orange-600 flex items-center">
-                        <Heart className="h-4 w-4 mr-1 fill-current" /> ₹
-                        {supporter.amount}
+              {creatorData.donations.map((donation, index) => {
+                // Find the supporter details based on supporterId
+                const supporter = creatorData.supporters.find(
+                  (s) => s.id === donation.supporterId
+                );
+
+                const supporterName = supporter?.name || "Anonymous"; // Get the name or fallback to 'Anonymous'
+
+                return (
+                  <div
+                    key={donation.id}
+                    className="flex items-start space-x-4 p-4 bg-white rounded-lg shadow transition-all duration-300 hover:shadow-md"
+                  >
+                    <Avatar>
+                      <AvatarFallback className="bg-orange-100 text-orange-600">
+                        {supporterName[0]?.toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-semibold text-gray-800">
+                          {supporterName}
+                        </h3>
+                        <p className="text-sm font-medium text-orange-600 flex items-center">
+                          <Heart className="h-4 w-4 mr-1 fill-current" /> ₹
+                          {donation.amount}
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {donation.message || "No message"}
                       </p>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {supporter.message}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
     </div>
   );

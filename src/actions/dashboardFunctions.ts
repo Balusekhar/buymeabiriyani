@@ -13,6 +13,8 @@ export const getCreatorDetails = async () => {
     });
 
     if (creator) {
+      console.log(typeof creator);
+      console.log(creator);
       return creator;
     }
   }

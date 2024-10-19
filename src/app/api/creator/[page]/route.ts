@@ -10,11 +10,11 @@ export async function GET(request: Request, { params }: { params: { page: string
       email: session?.user?.email,
     },
     include: {
-      supporters: {
-        take: 10,
-        skip: (page - 1) * 10,
-        orderBy: { createdAt: "desc" },
-      },
+      // supporters: {
+      //   take: 10,
+      //   skip: (page - 1) * 10,
+      //   orderBy: { createdAt: "desc" },
+      // },
       donations: {
         take: 10,
         skip: (page - 1) * 10,

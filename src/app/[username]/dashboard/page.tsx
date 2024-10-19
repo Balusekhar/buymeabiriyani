@@ -17,12 +17,33 @@ import {
 import Image from "next/image";
 import { handleSignOut } from "@/actions/logoutAction";
 import { useState, useEffect } from "react";
-import { Creator } from "@/types/dashboard"; // Import the Creator type
+import { Creator } from "@/types/dashboard";
+import { loadStripe } from "@stripe/stripe-js";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string
+);
 
 function CreatorDashboard({ params }: { params: { username: string } }) {
   const [selectedAmount, setSelectedAmount] = useState(10);
+  const [supporterName, setSupporterName] = useState("");
+  const [message, setMessage] = useState("");
   const [creatorData, setCreatorData] = useState<Creator | null>(null);
   console.log(creatorData);
+
+  useEffect(() => {
+    // Check to see if this is a redirect back from Checkout
+    const query = new URLSearchParams(window.location.search);
+    if (query.get("success")) {
+      console.log("Order placed! You will receive an email confirmation.");
+    }
+
+    if (query.get("canceled")) {
+      console.log(
+        "Order canceled -- continue to shop around and checkout when you’re ready."
+      );
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCreatorData = async () => {
@@ -42,127 +63,42 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
     return <div>Loading...</div>;
   }
 
-  const totalDonations = creatorData.donations.reduce(
-    (sum, donation) => sum + donation.amount,
-    0
-  );
-  const supporterCount = creatorData.supporters.length;
+  // const totalDonations = creatorData.donations.reduce(
+  //   (sum, donation) => sum + donation.amount,
+  //   0
+  // );
+
+  // Function to handle checkout
+  const handleCheckout = async () => {
+    try {
+      const response = await fetch("/api/checkout_sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          creator: creatorData.username,
+          supporter: supporterName,
+          amount: selectedAmount,
+          message: message,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create checkout session");
+      }
+
+      const data = await response.json();
+
+      // Redirect to Stripe Checkout (this will happen on the server-side, no CORS issue)
+      window.location.href = data.url;
+    } catch (error: any) {
+      console.error("Error creating session:", error.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="sticky top-0 z-50 bg-white shadow-md">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold text-orange-500">
-            BuyMeABiriyani
-          </Link>
-          <div className="flex items-center space-x-4">
-            <Link
-              href={`/${creatorData.username}`}
-              className="text-gray-600 hover:text-orange-500 flex items-center"
-            >
-              <ExternalLink className="h-5 w-5 mr-1" />
-              Visit Your Page
-            </Link>
-            <form action={handleSignOut}>
-              <Button
-                variant="ghost"
-                className="text-gray-600 hover:text-orange-500"
-              >
-                <LogOut className="h-5 w-5 mr-1" />
-                Logout
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      {/* Cover Photo */}
-      <div className="relative h-64 md:h-80 lg:h-96">
-        <Image
-          src="https://fastly.picsum.photos/id/112/4200/2800.jpg?hmac=8Qhr0ehkFOnlKO__aKhLMQTu2qzcAten9LHpBO6uk-k"
-          alt="Cover Photo"
-          fill
-          placeholder="blur"
-          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-          // objectFit="cover"
-          priority
-        />
-        <label
-          htmlFor="cover-photo-input"
-          className="absolute bottom-4 right-4 bg-white p-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors"
-        >
-          <Camera className="h-6 w-6 text-gray-600" />
-          <input
-            id="cover-photo-input"
-            type="file"
-            accept="image/*"
-            className="hidden"
-          />
-        </label>
-      </div>
-
-      {/* Profile Photo, Username, and Bio */}
-      <div className="container mx-auto px-4 mb-6 py-4">
-        <div className="flex flex-col items-center -mt-20">
-          <div className="relative">
-            <Avatar className="w-40 h-40 border-4 border-white shadow-lg">
-              <AvatarImage
-                src="https://avatar.iran.liara.run/public"
-                alt={creatorData.username}
-              />
-              <AvatarFallback>
-                {creatorData.username[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <label
-              htmlFor="profile-photo-input"
-              className="absolute bottom-2 right-2 bg-white p-2 rounded-full cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              <Camera className="h-5 w-5 text-gray-600" />
-              <input
-                id="profile-photo-input"
-                type="file"
-                accept="image/*"
-                className="hidden"
-              />
-            </label>
-          </div>
-
-          {/* Username and Bio */}
-          <div className="text-center mt-3 space-y-2">
-            <div className="flex items-center justify-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {creatorData.username}
-              </h1>
-            </div>
-
-            <div className="max-w-2xl mx-auto">
-              <p className="text-gray-600">
-                {creatorData.bio ||
-                  "A passionate creator serving up delicious content! 🍛"}
-              </p>
-            </div>
-
-            <div className="flex justify-center space-x-8 text-gray-600 mt-2">
-              <div className="flex items-center space-x-1">
-                <Users className="h-4 w-4" />
-                <span className="text-sm">{supporterCount} supporters</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <DollarSign className="h-4 w-4" />
-                <span className="text-sm">
-                  ₹{totalDonations.toFixed(2)} received
-                </span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <TrendingUp className="h-4 w-4" />
-                <span className="text-sm">Top 10% creator</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Recent and New Donations */}
       <div className="grid px-4 py-2 md:grid-cols-2 gap-8">
         <Card>
@@ -206,20 +142,42 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
                 Custom Amount
               </label>
               <Input
-                id="custom-amount"
+                id="amount"
                 placeholder="Enter amount"
                 type="number"
                 min="1"
                 step="1"
                 className="w-full"
+                value={selectedAmount}
                 onChange={(e) => setSelectedAmount(parseInt(e.target.value))}
               />
             </div>
+            <div className="mb-4">
+              <label
+                htmlFor="supporter-name"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Enter your name
+              </label>
+              <Input
+                id="supporter-name"
+                placeholder="Eg: John Doe"
+                type="text"
+                className="w-full"
+                value={supporterName}
+                onChange={(e: any) => setSupporterName(e.target.value)}
+              />
+            </div>
             <Textarea
+              value={message}
+              onChange={(e: any) => setMessage(e.target.value)}
               placeholder="Leave a message (optional)"
               className="mb-4"
             />
-            <Button className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 transition-all duration-300">
+            <Button
+              onClick={handleCheckout}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 transition-all duration-300"
+            >
               Support with ₹{selectedAmount || ""}{" "}
               {selectedAmount ? "Biriyani" : ""}
             </Button>
@@ -229,7 +187,7 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
         <Card>
           <CardContent className="p-6">
             <h2 className="text-2xl font-bold mb-4">Recent Supporters</h2>
-            <div className="space-y-4">
+            {/* <div className="space-y-4">
               {creatorData.donations.map((donation, index) => {
                 // Find the supporter details based on supporterId
                 const supporter = creatorData.supporters.find(
@@ -265,7 +223,7 @@ function CreatorDashboard({ params }: { params: { username: string } }) {
                   </div>
                 );
               })}
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>
